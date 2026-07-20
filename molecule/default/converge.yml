@@ -2,9 +2,57 @@
 # Purpose: bring the instance to the desired state by running the role under test.
 # Molecule calls this playbook with `molecule converge`.
 - name: Converge
-  hosts: all
-  gather_facts: true # Disable if your role does not rely on facts
+  hosts: localhost
+  gather_facts: false # Disable if your role does not rely on facts
+  vars:
+    role_path: ../../../slm-ansible-role-vault-client
+    vault:
+      url:
+        internal: "http://localhost:8200"
+        external: "http://localhost:8200"
+    _vault_token: "myroot"
+    # OBJECTS FOR TESTING:
+    policy:
+      name: "test-policy"
+      content: |
+        path "secret/data/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+        }
+    kv_secret_engine:
+      name: "test-kv-secret-engine"
+    approle:
+      name: "test-approle"
+    group:
+      name: "test-group"
+      type: "internal"
+      policies:
+        - "{{ policy.name }}"
+    ca:
+      pki_name: "test-ca"
+      common_name: "test-ca.example.com"
+      ttl: "31536000" # 1 year in seconds
+      issuer_name: "test-ca.example.com"
+      role_name: "test-ca-role"
+      certificates:
+        - common_name: "subdomain.{{ca.common_name}}"
+          ttl: "{{ ((ca.ttl | int) / 2) | int }}"
   tasks:
-    - name: Apply role under test
-      ansible.builtin.include_role:
-        name: yournamespace.yourcollection.yourrole
+    # TEST POLICY ACTIONS:
+    - name: "Test Policy Creation"
+      ansible.builtin.include_tasks: tasks/test_policy.yml
+
+    # TEST KV SECRET ENGINE ACTIONS:
+    - name: "Test KV Secret Engine Creation"
+      ansible.builtin.include_tasks: tasks/test_kv_secret_engine.yml
+
+    # TEST APPROLE ACTIONS:
+    - name: "Test Approle Actions"
+      ansible.builtin.include_tasks: tasks/test_approle.yml
+
+    # TEST GROUP ACTIONS:
+    - name: "Test Group Actions"
+      ansible.builtin.include_tasks: tasks/test_group.yml
+
+    # TEST CA ACTIONS:
+    - name: "Test Root CA Actions"
+      ansible.builtin.include_tasks: tasks/test_root_ca.yml
