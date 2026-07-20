@@ -4,8 +4,7 @@ collections:
     version: ">=3.10.4"
 
 roles:
-  # TODO: Replace with eclipse-slm repo
   - name: molecule_docker
-    src: "git+https://github.com/ipa-big/molecule_docker"
+    src: "git+https://github.com/eclipse-slm/molecule_docker"
     scm: git
     version: main
