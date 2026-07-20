@@ -1,7 +1,8 @@
 - name: "Assert inputs of 'vault/client | ca/create_root_certificate_authority.yml'"
-  assert:
+  ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)
+      - (vault.url.external is defined) and (vault.url.external|length > 0)
       - (_vault_token is defined) and (_vault_token|length > 0)
       - (_pki_name is defined) and (_pki_name|length > 0)
       - (_common_name is defined) and (_common_name|length > 0)
@@ -15,13 +16,14 @@
 
     fail_msg: "Variable must be defined and not empty"
 
-- set_fact:
+- name: "Vault | PKI Root CA | Set pki_name_full fact"
+  ansible.builtin.set_fact:
     pki_name_full: "pki_root_{{ _pki_name }}"
 
 - name: "Vault | PKI Root CA | Check if pki secrets engine 'pki_root_{{ pki_name_full }}' exists"
-  uri:
+  ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/sys/mounts/{{ pki_name_full }}"
-    validate_certs: no
+    validate_certs: false
     method: GET
     headers:
       Authorization: "Bearer {{ _vault_token }}"
@@ -31,11 +33,13 @@
       type: "pki"
   register: pki
 
-- block:
+- name: "Vault | PKI Root CA | Create the pki secrets engine 'pki_root_{{ pki_name_full }}' and configure it"
+  when: pki.status != 200
+  block:
     - name: "Vault | PKI Root CA | Enable the pki secrets engine at pki path using /sys/mounts"
-      uri:
+      ansible.builtin.uri:
         url: "{{ vault.url.internal }}/v1/sys/mounts/{{ pki_name_full }}"
-        validate_certs: no
+        validate_certs: false
         method: POST
         headers:
           Authorization: "Bearer {{ _vault_token }}"
@@ -45,9 +49,9 @@
           type: "pki"
 
     - name: "Vault | PKI Root CA | Tune the pki secrets engine to issue certificates with a maximum time-to-live (TTL) of {{ _ttl }}"
-      uri:
+      ansible.builtin.uri:
         url: "{{ vault.url.internal }}/v1/sys/mounts/{{ pki_name_full }}/tune"
-        validate_certs: no
+        validate_certs: false
         method: POST
         headers:
           Authorization: "Bearer {{ _vault_token }}"
@@ -57,9 +61,9 @@
           max_lease_ttl: "{{ _ttl }}"
 
     - name: "Vault | PKI Root CA | Generate the root certificate and extract the CA certificate"
-      uri:
+      ansible.builtin.uri:
         url: "{{ vault.url.internal }}/v1/{{ pki_name_full }}/root/generate/internal"
-        validate_certs: no
+        validate_certs: false
         method: POST
         headers:
           Authorization: "Bearer {{ _vault_token }}"
@@ -75,15 +79,15 @@
       register: root_ca
 
     - name: "Vault | PKI Root CA | Assert root_ca"
-      assert:
+      ansible.builtin.assert:
         that:
           - (root_ca is defined) and (root_ca|length > 0) and (root_ca.json.data.certificate is defined) and (root_ca.json.data.certificate |length > 0)
         fail_msg: "Root CA must be created"
 
     - name: "Vault | PKI Root CA | Create a role for the root CA"
-      uri:
+      ansible.builtin.uri:
         url: "{{ vault.url.internal }}/v1/{{ pki_name_full }}/roles/{{ _role_name }}"
-        validate_certs: no
+        validate_certs: false
         method: PUT
         headers:
           Authorization: "Bearer {{ _vault_token }}"
@@ -94,9 +98,9 @@
           issuer_ref: "{{ _issuer_name }}"
 
     - name: "Vault | PKI Root CA | Configure the CA and CRL URLs."
-      uri:
+      ansible.builtin.uri:
         url: "{{ vault.url.internal }}/v1/{{ pki_name_full }}/config/urls"
-        validate_certs: no
+        validate_certs: false
         method: POST
         headers:
           Authorization: "Bearer {{ _vault_token }}"
@@ -105,4 +109,3 @@
         body:
           issuing_certificates: "{{ vault.url.external }}/v1/pki/ca, http://127.0.0.1:8200/v1/pki/ca, http://vault:8200/v1/pki/ca"
           crl_distribution_points: "{{ vault.url.external }}/v1/pki/crl, http://127.0.0.1:8200/v1/pki/crl, http://vault:8200/v1/pki/crl"
-  when: pki.status != 200

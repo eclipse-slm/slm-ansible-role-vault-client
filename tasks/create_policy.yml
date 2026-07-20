@@ -1,6 +1,6 @@
 ### Inputs
 - name: "Assert inputs of 'vault/client | create_policy.yml'"
-  assert:
+  ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)
       - (_vault_token is defined) and (_vault_token|length > 0)
@@ -9,9 +9,9 @@
     fail_msg: "Variable must be defined and not empty"
 
 - name: "Create policy '{{ _policy_name }}'"
-  uri:
+  ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/sys/policy/{{ _policy_name }}"
-    validate_certs: no
+    validate_certs: false
     method: POST
     headers:
       X-Vault-Token: "{{ _vault_token }}"
