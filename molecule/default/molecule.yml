@@ -32,20 +32,15 @@ ansible:
       ansible_playbook:
         - --diff
         - --force-handlers
-        - --inventory=/path/to/inventory.yml
       ansible_navigator:
         - --mode stdout
         - --pull-policy missing
         - --execution-environment-image ghcr.io/ansible/community-ansible-dev-tools:latest
-
   playbooks:
     create: create.yml
+    # Converge includes verify steps:
     converge: converge.yml
     destroy: destroy.yml
-    cleanup: cleanup.yml
-    prepare: prepare.yml
-    side_effect: side_effect.yml
-    verify: verify.yml
 
 scenario:
   name: default
@@ -58,7 +53,5 @@ scenario:
     - prepare
     - converge
     - idempotence
-    - side_effect
-    - verify
     - cleanup
     - destroy
