@@ -1,0 +1,26 @@
+---
+- name: "Test Group Actions"
+  ansible.builtin.include_role:
+    name: "{{ role_path }}"
+    tasks_from: create_group
+  vars:
+    _group_name: "{{ group.name }}"
+    _group_type: "{{ group.type }}"
+    _group_policies: "{{ group.policies }}"
+
+- name: "Assert group '{{ group.name }}' exists"
+  ansible.builtin.uri:
+    url: "{{ vault.url.internal }}/v1/identity/group/name/{{ group.name }}"
+    validate_certs: false
+    method: GET
+    headers:
+      X-Vault-Token: "{{ _vault_token }}"
+    status_code: 200
+  register: output_get_group
+  changed_when: false
+
+- name: "Assert group '{{ group.name }}' type is correct"
+  ansible.builtin.assert:
+    that:
+      - output_get_group.json.data.type == group.type
+    fail_msg: "Group '{{ group.name }}' type does not match expected type"

@@ -1,0 +1,42 @@
+---
+- name: "Apply create_approle_auth_method tasks"
+  ansible.builtin.include_role:
+    name: "{{ role_path }}"
+    tasks_from: create_approle_auth_method
+
+- name: "Assert app role auth method 'approle' exists"
+  ansible.builtin.uri:
+    url: "{{ vault.url.internal }}/v1/sys/auth/approle"
+    validate_certs: false
+    method: GET
+    headers:
+      X-Vault-Token: "{{ _vault_token }}"
+    status_code: 200
+  register: output_get_approle_auth_method
+  changed_when: false
+
+- name: Assert app role auth method 'approle' type is correct
+  ansible.builtin.assert:
+    that:
+      - output_get_approle_auth_method.json.data.type == "approle"
+    fail_msg: "App role auth method 'approle' type does not match expected type 'approle'"
+
+- name: "Apply create_app_role tasks"
+  ansible.builtin.include_role:
+    name: "{{ role_path }}"
+    tasks_from: create_approle
+  vars:
+    _approle_name: "{{ approle.name }}"
+    _store_approle_config_in_consul: false
+
+- name: "Assert app role '{{ approle.name }}' exists"
+  ansible.builtin.uri:
+    url: "{{ vault.url.internal }}/v1/auth/approle/role/{{ approle.name }}"
+    validate_certs: false
+    method: GET
+    headers:
+      X-Vault-Token: "{{ _vault_token }}"
+    status_code: 200
+  register: output_get_approle
+  changed_when: false
+  

@@ -1,0 +1,47 @@
+---
+- name: "Create CA"
+  ansible.builtin.include_role:
+    name: "{{ role_path }}"
+    tasks_from: ca/create_root_certificate_authority
+  vars:
+    _pki_name: "{{ ca.pki_name }}"
+    _common_name: "{{ ca.common_name }}"
+    _ttl: "{{ ca.ttl }}"
+    _issuer_name: "{{ ca.issuer_name }}"
+    _role_name: "{{ ca.role_name }}"
+
+- name: "Assert CA '{{ ca.pki_name }}' exists"
+  ansible.builtin.uri:
+    url: "{{ vault.url.internal }}/v1/sys/mounts/pki_root_{{ ca.pki_name }}"
+    validate_certs: false
+    method: GET
+    headers:
+      X-Vault-Token: "{{ _vault_token }}"
+    status_code: 200
+  register: output_get_ca
+  changed_when: false
+
+- name: "Assert CA '{{ ca.pki_name }}' has correct configuration"
+  ansible.builtin.assert:
+    that:
+      - output_get_ca.json.data.type == "pki"
+      - output_get_ca.json.data.config.max_lease_ttl | string == ca.ttl
+    fail_msg: "CA '{{ ca.pki_name }}' configuration does not match expected configuration"
+
+- name: "Request CA"
+  ansible.builtin.include_role:
+    name: "{{ role_path }}"
+    tasks_from: ca/request_ca
+  vars:
+    _common_name: "{{ (ca.certificates | first).common_name }}"
+    _pki: "pki_root_{{ ca.pki_name }}"
+    _pki_role: "{{ ca.role_name }}"
+    _ttl: "{{ (ca.certificates | first).ttl }}"
+
+- name: Assert CA '{{ ca.pki_name }}' certificate request was successful
+  ansible.builtin.assert:
+    that:
+      - (certificates.certificate is defined) and (certificates.certificate | length > 0)
+      - (certificates.issuing_ca is defined) and (certificates.issuing_ca | length > 0)
+      - (certificates.private_key is defined) and (certificates.private_key | length > 0)
+    fail_msg: "CA '{{ ca.pki_name }}' certificate request failed"

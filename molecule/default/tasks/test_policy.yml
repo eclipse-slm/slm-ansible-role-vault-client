@@ -1,0 +1,25 @@
+---
+- name: Apply create_policy role tasks
+  ansible.builtin.include_role:
+    name: "{{ role_path }}"
+    tasks_from: create_policy
+  vars:
+    _policy_name: "{{ policy.name }}"
+    _policy_content: "{{ policy.content }}"
+
+- name: "Assert policy '{{ policy.name }}' exists"
+  ansible.builtin.uri:
+    url: "{{ vault.url.internal }}/v1/sys/policy/{{ policy.name }}"
+    validate_certs: false
+    method: GET
+    headers:
+      X-Vault-Token: "{{ _vault_token }}"
+    status_code: 200
+  register: output_get_policy
+  changed_when: false
+
+- name: "Assert policy '{{ policy.name }}' content is correct"
+  ansible.builtin.assert:
+    that:
+      - output_get_policy.json.data.rules == policy.content
+    fail_msg: "Policy '{{ policy.name }}' content does not match expected content"
