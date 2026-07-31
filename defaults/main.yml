@@ -1,3 +1,7 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for vault_client
+credential_data_type_list:
+  - "USERNAME_PASSWORD"
+  - "KEY_PAIR"
+credential_data_type_default: "USERNAME_PASSWORD"
