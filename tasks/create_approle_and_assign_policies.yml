@@ -1,5 +1,5 @@
 ### Inputs
-- name: "Assert inputs of 'create_approle_with_policies.yml'"
+- name: "VAULT_CLIENT | Assert inputs of 'create_approle_with_policies.yml'"
   ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)     # URL of Vault
@@ -8,9 +8,11 @@
       # Optional
       # - _approle_policy_names:                                                # List of policy names to be added to the created app role
 
-- ansible.builtin.import_tasks: create_approle.yml
+- name: "VAULT_CLIENT | Create app role '{{ _approle_name }}'"
+  ansible.builtin.import_tasks: create_approle.yml
 
-- ansible.builtin.include_tasks: add_policy_to_approle.yml
+- name: "VAULT_CLIENT | Add policy to app role '{{ _approle_name }}'"
+  ansible.builtin.include_tasks: add_policy_to_approle.yml
   vars:
     _new_approle_token_policy: "{{ _approle_policy_name }}"
   loop: "{{ _approle_policy_names }}"
@@ -18,7 +20,7 @@
     loop_var: _approle_policy_name
   when: (_approle_policy_names is defined) and (_approle_policy_names|length > 0)
 
-- name: "Add Vault app role config in Consul"
+- name: "VAULT_CLIENT | Add Vault app role config in Consul"
   ansible.builtin.include_role:
     name: eclipse-slm.consul_client
     tasks_from: create_or_add_config

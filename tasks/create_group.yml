@@ -1,5 +1,5 @@
 ### Inputs
-- name: "Assert inputs of 'vault/client | create_policy.yml'"
+- name: "VAULT_CLIENT | Assert inputs | create_group.yml"
   ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)                                   # The URL of the Vault server
@@ -9,7 +9,7 @@
       - (_group_policies is defined) and (_group_policies|length > 0)                                         # List of policies to be attached to the group
     fail_msg: "Variable must be defined and not empty"
 
-- name: "Create Vault group '{{ _group_name }}'"
+- name: "VAULT_CLIENT | Create Vault group '{{ _group_name }}'"
   ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/identity/group"
     validate_certs: false

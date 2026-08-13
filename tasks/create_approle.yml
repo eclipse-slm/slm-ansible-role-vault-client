@@ -1,5 +1,6 @@
 ### Inputs
-- name: "Assert inputs of 'vault/client | create_approle.yml'"
+- name: "VAULT_CLIENT | Assert inputs | create_approle.yml"
+  when: (_approle_policies|length > 0)
   ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)           # URL of Vault
@@ -9,14 +10,14 @@
     # Optional
     # _store_approle_config_in_consul: false                        # Boolean (default=true); If true, the app role config will be stored in Consul
 
-- name: "Assert conditional inputs of 'vault/client | create_approle.yml'"
+- name: "VAULT_CLIENT | Assert conditional inputs | create_approle.yml"
   when: (_store_approle_config_in_consul|default(true))
   ansible.builtin.assert:
     that:
       - (_consul_token is defined) and (_consul_token|length > 0)    # Token to authenticate with Consul
 
 
-- name: "Create app role '{{ _approle_name }}'"
+- name: "VAULT_CLIENT | Create app role '{{ _approle_name }}'"
   ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/auth/approle/role/{{ _approle_name }}"
     validate_certs: false
@@ -26,7 +27,7 @@
     status_code: 200, 204
   no_log: false
 
-- name: "Set app role id to app role name '{{ _approle_name }}'"
+- name: "VAULT_CLIENT | Set app role id to app role name '{{ _approle_name }}'"
   ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/auth/approle/role/{{ _approle_name }}/role-id"
     validate_certs: false
@@ -39,7 +40,7 @@
     status_code: 200, 204
   no_log: false
 
-- name: "Create secret id for app role with id '{{ _approle_name }}'"
+- name: "VAULT_CLIENT | Create secret id for app role with id '{{ _approle_name }}'"
   ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/auth/approle/role/{{ _approle_name }}/secret-id"
     validate_certs: false
@@ -50,12 +51,12 @@
   register: request_secret_id
   no_log: false
 
-- name: "Set fact for role id and secret id of app role '{{ _approle_name }}'"
+- name: "VAULT_CLIENT | Set fact for role id and secret id of app role '{{ _approle_name }}'"
   ansible.builtin.set_fact:
     role_id: "{{ _approle_name }}"
     secret_id: "{{ request_secret_id.json.data.secret_id }}"
 
-- name: "Store config for app role '{{ _approle_name }}' in Consul"
+- name: "VAULT_CLIENT | Store config for app role '{{ _approle_name }}' in Consul"
   when: (_store_approle_config_in_consul|default(true))
   ansible.builtin.include_role:
     name: eclipse-slm.consul_client
@@ -69,7 +70,7 @@
           secret-id: '{{ secret_id}}'
 
 ### Outputs
-- name: "Set facts for outputs"
+- name: "VAULT_CLIENT | Set facts for outputs"
   ansible.builtin.set_fact:
     vault_approle_role_id: "{{ role_id }}"        # Role id of the created app role
     vault_approle_secret_id: "{{ secret_id }}"    # Secret id of the created app role

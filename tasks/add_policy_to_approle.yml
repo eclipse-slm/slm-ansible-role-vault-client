@@ -1,6 +1,6 @@
 ### Inputs
-- name: "Assert inputs of 'vault/client | add_policy_to_approle.yml'"
-  assert:
+- name: "VAULT_CLIENT | Assert inputs | add_policy_to_approle.yml"
+  ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)
       - (_vault_token is defined) and (_vault_token|length > 0)
@@ -8,10 +8,10 @@
       - (_new_approle_token_policy is defined) and (_new_approle_token_policy|length > 0)
     fail_msg: "Variable must be defined and not empty"
 
-- name: "Get token policies of '{{ _approle_name }}'"
-  uri:
+- name: "VAULT_CLIENT | Get token policies of '{{ _approle_name }}'"
+  ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/auth/approle/role/{{ _approle_name }}/policies"
-    validate_certs: no
+    validate_certs: false
     method: GET
     headers:
       X-Vault-Token: "{{ _vault_token }}"
@@ -19,16 +19,18 @@
   register: output_approle_policies
   no_log: true
 
-- set_fact:
+- name: "VAULT_CLIENT | Set token policies of '{{ _approle_name }}'"
+  ansible.builtin.set_fact:
     token_policies: "{{ output_approle_policies.json.data.token_policies }}"
 
-- set_fact:
+- name: "VAULT_CLIENT | Add new token policy to '{{ _approle_name }}'"
+  ansible.builtin.set_fact:
     token_policies: "{{ (token_policies + [ _new_approle_token_policy ]) | unique }}"
 
-- name: "Write Token Policies of '{{ _approle_name }}'"
-  uri:
+- name: "VAULT_CLIENT | Write Token Policies of '{{ _approle_name }}'"
+  ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/auth/approle/role/{{ _approle_name }}/policies"
-    validate_certs: no
+    validate_certs: false
     method: POST
     headers:
       X-Vault-Token: "{{ _vault_token }}"

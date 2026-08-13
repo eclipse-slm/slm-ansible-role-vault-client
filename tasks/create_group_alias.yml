@@ -1,6 +1,6 @@
 ### Inputs
-- name: "Assert inputs of 'vault/client | create_policy.yml'"
-  assert:
+- name: "VAULT_CLIENT | Assert inputs | create_group_alias.yml"
+  ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)   # The URL of the Vault server
       - (_vault_token is defined) and (_vault_token|length > 0)               # The token used for authentication with Vault
@@ -9,38 +9,44 @@
       - (_mount_accessor_name is defined) and (_mount_accessor_name|length > 0) # The name of the auth mount
     fail_msg: "Variable must be defined and not empty"
 
-- name: "Get mount accessor for auth method '{{ _mount_accessor_name }}'"
+- name: "VAULT_CLIENT | Get mount accessor for auth method '{{ _mount_accessor_name }}'"
   block:
-  - uri:
-      url: "{{ vault.url.internal }}/v1/sys/auth/{{ _mount_accessor_name }}"
-      validate_certs: no
-      method: GET
-      headers:
-        X-Vault-Token: "{{ _vault_token }}"
-      body_format: json
-      status_code: 200
-    register: output_auth_mount
-  - set_fact:
-      __mount_accessor: "{{ output_auth_mount.json.accessor }}"
+    - name: "VAULT_CLIENT | Get mount accessor for auth method '{{ _mount_accessor_name }}'"
+      ansible.builtin.uri:
+        url: "{{ vault.url.internal }}/v1/sys/auth/{{ _mount_accessor_name }}"
+        validate_certs: false
+        method: GET
+        headers:
+          X-Vault-Token: "{{ _vault_token }}"
+        body_format: json
+        status_code: 200
+      register: output_auth_mount
 
-- name: "Get group id of group '{{ _group_name }}'"
+    - name: "VAULT_CLIENT | Set mount accessor '{{ _mount_accessor_name }}'"
+      ansible.builtin.set_fact:
+        __mount_accessor: "{{ output_auth_mount.json.accessor }}"
+
+- name: "VAULT_CLIENT | Get group id of group '{{ _group_name }}'"
   block:
-  - uri:
-      url: "{{ vault.url.internal }}/v1/identity/group/name/{{ _group_name }}"
-      validate_certs: no
-      method: GET
-      headers:
-        X-Vault-Token: "{{ _vault_token }}"
-      body_format: json
-      status_code: 200
-    register: output_group_lookup
-  - set_fact:
-      __group_id: "{{ output_group_lookup.json.data.id }}"
+    - name: "VAULT_CLIENT | Get group id for group '{{ _group_name }}'"
+      ansible.builtin.uri:
+        url: "{{ vault.url.internal }}/v1/identity/group/name/{{ _group_name }}"
+        validate_certs: false
+        method: GET
+        headers:
+          X-Vault-Token: "{{ _vault_token }}"
+        body_format: json
+        status_code: 200
+      register: output_group_lookup
 
-- name: "Create group alias for '{{ _alias_name }}'"
-  uri:
+    - name: "VAULT_CLIENT | Set group id for group '{{ _group_name }}'"
+      ansible.builtin.set_fact:
+        __group_id: "{{ output_group_lookup.json.data.id }}"
+
+- name: "VAULT_CLIENT | Create group alias for '{{ _alias_name }}'"
+  ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/identity/group-alias"
-    validate_certs: no
+    validate_certs: false
     method: POST
     headers:
       X-Vault-Token: "{{ _vault_token }}"

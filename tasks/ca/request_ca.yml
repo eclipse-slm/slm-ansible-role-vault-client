@@ -1,4 +1,4 @@
-- name: "Assert inputs of 'vault/client | ca/create_root_certificate_authority.yml'"
+- name: "VAULT_CLIENT | Assert inputs | ca/request_ca.yml'"
   ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)
@@ -10,7 +10,7 @@
     # Optional:
     # - _ttl=43000h         # The time-to-live (TTL) for the certificate. Default is 43000h (5 years).
 
-- name: "Request Certificate"
+- name: "VAULT_CLIENT | Request Certificate"
   ansible.builtin.uri:
     url: "{{ vault.url.internal }}/v1/{{ _pki }}/issue/{{ _pki_role }}"
     validate_certs: false
@@ -24,7 +24,7 @@
       ttl: "{{ _ttl | default('43000h') }}"
   register: vault_certificate
 
-- name: "Set outputs of 'vault/client | ca/request_ca.yml'"
+- name: "VAULT_CLIENT | Set outputs | ca/request_ca.yml"
   ansible.builtin.set_fact:
     certificates:
       certificate: "{{ vault_certificate.json.data.certificate }}"
