@@ -1,6 +1,5 @@
 ### Inputs
 - name: "VAULT_CLIENT | Assert inputs | create_approle.yml"
-  when: (_approle_policies|length > 0)
   ansible.builtin.assert:
     that:
       - (vault.url.internal is defined) and (vault.url.internal|length > 0)           # URL of Vault
